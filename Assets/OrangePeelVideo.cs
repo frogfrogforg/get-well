@@ -1,15 +1,16 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
+using UnityEngine.Video;
 using UnityEngine.Events;
 
 public class OrangePeelVideo : MonoBehaviour
 {
-    public Camera cam;
-    public VideoClip clip;
+    public GameObject cam;
     public VideoClip clip;
 
-    private List<Func<bool>> possibilities = new List() {
+    private List<Func<bool>> possibilities = new List<Func<bool>>() {
         () => Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow),
         () => Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow),
         () => Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow),
@@ -22,18 +23,21 @@ public class OrangePeelVideo : MonoBehaviour
     private float currentTimer;
     private float correctTimer = 0;
     private float incorrectTimer = 0;
-    private int currentCheck;
-    private float playbackSpeed;
+    public int currentCheck;
+    public float playbackSpeed;
     public UnityEvent onEnd;
+    public VideoRenderMode a;
+    public RenderTexture texture;
+    private VideoPlayer videoPlayer;
 
     void Start()
     {
         // Will attach a VideoPlayer to the main camera.
-        GameObject camera = cam;
+        GameObject camera = cam.gameObject;
 
         // VideoPlayer automatically targets the camera backplane when it is added
         // to a camera object, no need to change videoPlayer.targetCamera.
-        var videoPlayer = camera.AddComponent<UnityEngine.Video.VideoPlayer>();
+        videoPlayer = camera.AddComponent<UnityEngine.Video.VideoPlayer>();
 
         // Play on awake defaults to true. Set it to false to avoid the url set
         // below to auto-start playback since we're in Start().
@@ -41,10 +45,11 @@ public class OrangePeelVideo : MonoBehaviour
 
         // By default, VideoPlayers added to a camera will use the far plane.
         // Let's target the near plane instead.
-         videoPlayer.renderMode = Video.VideoTarget.RenderTexture;
+         videoPlayer.renderMode = a;
 
         // This will cause our Scene to be visible through the video being played.
         videoPlayer.targetCameraAlpha = 0.5F;
+        videoPlayer.targetTexture = texture;
 
         // Set the video to play. URL supports local absolute or relative paths.
         // Here, using absolute.
@@ -58,6 +63,7 @@ public class OrangePeelVideo : MonoBehaviour
 
         // Each time we reach the end, we slow down the playback by a factor of 10.
         videoPlayer.loopPointReached += EndReached;
+        videoPlayer.EnableAudioTrack(0, false);
 
         // Start playback. This means the VideoPlayer may have to prepare (reserve
         // resources, pre-load a few frames, etc.). To better control the delays
@@ -68,27 +74,28 @@ public class OrangePeelVideo : MonoBehaviour
 
     void EndReached(UnityEngine.Video.VideoPlayer vp)
     {
-        onEnd.Invoke()
+        onEnd.Invoke();
     }
 
     // Update is called once per frame
     void Update()
     {
-        currentTimer += Time.deltaTime
+        currentTimer += Time.deltaTime;
         if(currentTimer > Timer) {
             currentTimer = 0;
-            currentCheck = Random.Range(0, 4);
+            currentCheck = UnityEngine.Random.Range(0, 4);
         }
 
         if(possibilities[currentCheck]()) {
             incorrectTimer = 0;
             correctTimer += Time.deltaTime;
-            playbackSpeed = 1 + correctTimer * goodMultiplier;
         } else {
-            correctTimer = 0;
-            incorrectTimer += Time.deltaTime;
-            playbackSpeed = - (0.5 + incorrectTimer * goodMultiplier);
+            correctTimer -= 0.3f*Time.deltaTime;
         }
+        correctTimer = Mathf.Max(0, correctTimer);
+
+        playbackSpeed = correctTimer * goodMultiplier;
+        videoPlayer.playbackSpeed = playbackSpeed;
         
     }
 }
