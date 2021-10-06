@@ -92,7 +92,7 @@ public class OrangePeelVideo : MonoBehaviour
         } else {
             correctTimer -= 0.3f*Time.deltaTime;
         }
-        correctTimer = Mathf.Max(0, correctTimer);
+        correctTimer = Mathf.Max(0.03f, correctTimer);
 
         playbackSpeed = correctTimer * goodMultiplier;
         videoPlayer.playbackSpeed = playbackSpeed;
